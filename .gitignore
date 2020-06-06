@@ -1,0 +1,5 @@
+statistics/package
+*/.env
+*/output.json
+*.zip
+__pycache__
