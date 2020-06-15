@@ -1,4 +1,4 @@
-from requests import Session
+import requests
 import os
 import json
 import atexit
@@ -9,15 +9,30 @@ from datetime import date, timedelta
 
 URI = "https://mixpanel.com/api/2.0/events"
 S3_BUCKET = os.environ["S3_BUCKET"]
-client = boto3.client("s3")
+CLOUDFLARE_TOKEN = os.environ["CLOUDFLARE_TOKEN"]
+CLOUDFLARE_BASE_URL = os.environ["CLOUDFLARE_BASE_URL"]
+CLOUDFLARE_ZONE = os.environ["CLOUDFLARE_ZONE"]
 
+client = boto3.client("s3")
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
+def purge_cloudflare_cache():
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + CLOUDFLARE_TOKEN,
+    }
+    data = {"files": [f"https://www.sthlmlunch.se/statistics.json"]}
+    url = f"{CLOUDFLARE_BASE_URL}/zones/{CLOUDFLARE_ZONE}/purge_cache"
+    response = requests.post(url, headers=headers, json=data)
+    if response.status_code != 200:
+        logger.error(f"{response.status_code}: {response.text}")
+
+
 class Client:
     def __init__(self):
-        self.session = Session()
+        self.session = requests.Session()
         self.session.auth = (os.environ["AWS_SECRET"], "")
         atexit.register(self.session.close)
 
@@ -55,4 +70,5 @@ def lambda_handler(event, context):
     series = client.events_series(event_names)
     statistics = {"events": events, "series": series}
     write_file(statistics)
+    purge_cloudflare_cache()
     return {"statusCode": 201}

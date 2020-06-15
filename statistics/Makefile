@@ -1,7 +1,7 @@
 .PHONY: setup build deploy invoke run clean
 
 setup:
-	pip install --target ./package -r requirements.txt
+	pip install --target ./package -r requirements.txt --upgrade
 
 clean:
 	rm -f function.zip
